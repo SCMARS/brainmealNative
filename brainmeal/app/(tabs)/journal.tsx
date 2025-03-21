@@ -43,6 +43,8 @@ export default function JournalScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEntry, setNewEntry] = useState<Partial<JournalEntry>>({
     type: 'meal',
+    title: '',
+    details: '',
   });
 
   const addEntry = () => {
@@ -53,11 +55,11 @@ export default function JournalScreen() {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         title: newEntry.title,
         details: newEntry.details,
-        calories: newEntry.calories,
+        calories: newEntry.type === 'meal' ? newEntry.calories : undefined,
       };
       setEntries([entry, ...entries]);
       setShowAddModal(false);
-      setNewEntry({ type: 'meal' });
+      setNewEntry({ type: 'meal', title: '', details: '' });
     }
   };
 
@@ -88,153 +90,178 @@ export default function JournalScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-          Journal
-        </Text>
-        <TouchableOpacity
-          onPress={() => setShowAddModal(true)}
-          style={styles.addButton}
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#FF6B00" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.entriesContainer}>
-        {entries.map((entry) => (
-          <View
-            key={entry.id}
-            style={[
-              styles.entryCard,
-              { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
-            ]}
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
+            Journal
+          </Text>
+          <TouchableOpacity
+              onPress={() => setShowAddModal(true)}
+              style={styles.addButtonIcon}
           >
-            <LinearGradient
-              colors={getEntryColor(entry.type)}
-              style={styles.iconContainer}
-            >
-              <Ionicons name={getEntryIcon(entry.type)} size={24} color="#fff" />
-            </LinearGradient>
-
-            <View style={styles.entryContent}>
-              <View style={styles.entryHeader}>
-                <Text style={[styles.entryTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                  {entry.title}
-                </Text>
-                <Text style={[styles.entryTime, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-                  {entry.time}
-                </Text>
-              </View>
-
-              <Text style={[styles.entryDetails, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                {entry.details}
-              </Text>
-
-              {entry.calories && (
-                <Text style={[styles.calories, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-                  {entry.calories} kcal
-                </Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      {showAddModal && (
-        <View style={styles.modal}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#fff' },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-              Add New Entry
-            </Text>
-
-            <View style={styles.typeSelector}>
-              {['meal', 'activity', 'water'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeButton,
-                    newEntry.type === type && styles.selectedType,
-                    { backgroundColor: colorScheme === 'dark' ? '#333' : '#F5F5F5' },
-                  ]}
-                  onPress={() => setNewEntry({ ...newEntry, type })}
-                >
-                  <Text
-                    style={[
-                      styles.typeText,
-                      { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                      newEntry.type === type && styles.selectedTypeText,
-                    ]}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TextInput
-              style={[
-                styles.input,
-                { color: colorScheme === 'dark' ? '#fff' : '#000' },
-              ]}
-              placeholder="Title"
-              placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-              value={newEntry.title}
-              onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
-            />
-
-            <TextInput
-              style={[
-                styles.input,
-                { color: colorScheme === 'dark' ? '#fff' : '#000' },
-              ]}
-              placeholder="Details"
-              placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-              value={newEntry.details}
-              onChangeText={(text) => setNewEntry({ ...newEntry, details: text })}
-              multiline
-            />
-
-            {newEntry.type === 'meal' && (
-              <TextInput
-                style={[
-                  styles.input,
-                  { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                ]}
-                placeholder="Calories"
-                placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-                value={newEntry.calories?.toString()}
-                onChangeText={(text) => setNewEntry({ ...newEntry, calories: parseInt(text) || undefined })}
-                keyboardType="numeric"
-              />
-            )}
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowAddModal(false);
-                  setNewEntry({ type: 'meal' });
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.addButton]}
-                onPress={addEntry}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            <Ionicons name="add-circle-outline" size={24} color="#FF6B00" />
+          </TouchableOpacity>
         </View>
-      )}
-    </SafeAreaView>
+
+        <ScrollView style={styles.entriesContainer}>
+          {entries.map((entry) => (
+              <View
+                  key={entry.id}
+                  style={[
+                    styles.entryCard,
+                    { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
+                  ]}
+              >
+                <LinearGradient
+                    colors={getEntryColor(entry.type)}
+                    style={styles.iconContainer}
+                >
+                  <Ionicons name={getEntryIcon(entry.type)} size={24} color="#fff" />
+                </LinearGradient>
+
+                <View style={styles.entryContent}>
+                  <View style={styles.entryHeader}>
+                    <Text style={[styles.entryTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
+                      {entry.title}
+                    </Text>
+                    <Text style={[styles.entryTime, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
+                      {entry.time}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.entryDetails, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
+                    {entry.details}
+                  </Text>
+
+                  {entry.calories && (
+                      <Text style={[styles.calories, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
+                        {entry.calories} kcal
+                      </Text>
+                  )}
+                </View>
+              </View>
+          ))}
+        </ScrollView>
+
+        {showAddModal && (
+            <View style={styles.modal}>
+              <View
+                  style={[
+                    styles.modalContent,
+                    { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#fff' },
+                  ]}
+              >
+                <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
+                  Add New Entry
+                </Text>
+
+                <View style={styles.typeSelector}>
+                  {['meal', 'activity', 'water'].map((type) => (
+                      <TouchableOpacity
+                          key={type}
+                          style={[
+                            styles.typeButton,
+                            newEntry.type === type && styles.selectedType,
+                            { backgroundColor: colorScheme === 'dark' ? '#333' : '#F5F5F5' },
+                          ]}
+                          onPress={() => setNewEntry({ ...newEntry, type: type as 'meal' | 'activity' | 'water' })}
+                      >
+                        <Text
+                            style={[
+                              styles.typeText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
+                              newEntry.type === type && styles.selectedTypeText,
+                            ]}
+                        >
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        color: colorScheme === 'dark' ? '#fff' : '#000',
+                        borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
+                      },
+                    ]}
+                    placeholder="Title"
+                    placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
+                    value={newEntry.title}
+                    onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
+                />
+
+                <TextInput
+                    style={[
+                      styles.input,
+                      styles.textArea,
+                      {
+                        color: colorScheme === 'dark' ? '#fff' : '#000',
+                        borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
+                      },
+                    ]}
+                    placeholder="Details"
+                    placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
+                    value={newEntry.details}
+                    onChangeText={(text) => setNewEntry({ ...newEntry, details: text })}
+                    multiline={true}
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                />
+
+                {newEntry.type === 'meal' && (
+                    <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            color: colorScheme === 'dark' ? '#fff' : '#000',
+                            borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
+                          },
+                        ]}
+                        placeholder="Calories"
+                        placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
+                        value={newEntry.calories?.toString() || ''}
+                        onChangeText={(text) => {
+                          const calories = text === '' ? undefined : parseInt(text);
+                          setNewEntry({ ...newEntry, calories });
+                        }}
+                        keyboardType="numeric"
+                    />
+                )}
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                      style={[
+                        styles.modalButton,
+                        styles.cancelButton,
+                        { backgroundColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' }
+                      ]}
+                      onPress={() => {
+                        setShowAddModal(false);
+                        setNewEntry({ type: 'meal', title: '', details: '' });
+                      }}
+                  >
+                    <Text style={[
+                      styles.cancelButtonText,
+                      { color: colorScheme === 'dark' ? '#fff' : '#666' }
+                    ]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                      style={[styles.modalButton, styles.addButton]}
+                      onPress={addEntry}
+                      disabled={!newEntry.title || !newEntry.details}
+                  >
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+        )}
+      </SafeAreaView>
   );
 }
 
@@ -252,7 +279,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  addButton: {
+  addButtonIcon: {
     padding: 8,
   },
   entriesContainer: {
@@ -264,6 +291,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
     width: 48,
@@ -305,16 +337,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
   modalContent: {
     width: '90%',
     borderRadius: 12,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
+    textAlign: 'center',
   },
   typeSelector: {
     flexDirection: 'row',
@@ -337,25 +376,31 @@ const styles = StyleSheet.create({
   },
   selectedTypeText: {
     color: '#fff',
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     marginBottom: 15,
     fontSize: 16,
   },
+  textArea: {
+    minHeight: 80,
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 20,
+    marginTop: 10,
   },
   modalButton: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginLeft: 10,
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelButton: {
     backgroundColor: '#E0E0E0',
@@ -364,7 +409,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B00',
   },
   cancelButtonText: {
-    color: '#666',
     fontSize: 16,
   },
   addButtonText: {
@@ -372,4 +416,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});
