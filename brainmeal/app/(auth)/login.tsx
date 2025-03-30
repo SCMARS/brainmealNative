@@ -1,218 +1,183 @@
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
+    TouchableWithoutFeedback,
+    Keyboard,
+    Alert
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
-export default function LoginScreen() {
-  const colorScheme = useColorScheme();
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
 
-    try {
-      setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      // Прямая навигация после успешного входа
-      router.replace('/(tabs)/meal-plan');
-    } catch (error: any) {
-      let errorMessage = 'An error occurred during sign in';
-      
-      switch (error.code) {
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-          break;
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email. Please sign up first.';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email format. Please enter a valid email address.';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many failed attempts. Please try again later.';
-          break;
-        default:
-          errorMessage = error.message;
-      }
-      
-      Alert.alert('Sign In Error', errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            setLoading(true);
+            await signInWithEmailAndPassword(auth, email, password);
+            router.replace('/(tabs)');
+        } catch (error: any) {
+            let errorMessage = 'An error occurred during sign in';
+            
+            switch (error.code) {
+                case 'auth/invalid-credential':
+                    errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+                    break;
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email. Please sign up first.';
+                    break;
+                case 'auth/wrong-password':
+                    errorMessage = 'Incorrect password. Please try again.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email format. Please enter a valid email address.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many failed attempts. Please try again later.';
+                    break;
+                default:
+                    errorMessage = error.message;
+            }
+            
+            Alert.alert('Sign In Error', errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <LinearGradient
-            colors={['#FF6B00', '#FF8533']}
-            style={styles.logoContainer}
-          >
-            <Text style={styles.logoText}>BM</Text>
-          </LinearGradient>
-          <Text style={[styles.title, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Welcome Back
-          </Text>
-          <Text style={[styles.subtitle, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-            Sign in to continue
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' }]}>
-            <TextInput
-              style={[styles.input, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}
-              placeholder="Email"
-              placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' }]}>
-            <TextInput
-              style={[styles.input, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}
-              placeholder="Password"
-              placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.forgotPassword, { opacity: loading ? 0.5 : 1 }]}
-            onPress={() => router.push('/forgot-password')}
-            disabled={loading}
-          >
-            <Text style={[styles.forgotPasswordText, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-              Forgot Password?
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.loginButton, { opacity: loading ? 0.5 : 1 }]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={['#FF6B00', '#FF8533']}
-              style={styles.loginButtonGradient}
+    return (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Signing in...' : 'Sign In'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+                <View style={styles.formContainer}>
+                    <Text style={styles.title}>Welcome Back!</Text>
+                    <Text style={styles.subtitle}>Sign in to continue</Text>
 
-          <View style={styles.registerContainer}>
-            <Text style={[styles.registerText, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-              Don't have an account?
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/register')}
-              disabled={loading}
-            >
-              <Text style={styles.registerLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </SafeAreaView>
-  );
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            placeholderTextColor="#666"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            editable={!loading}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            placeholderTextColor="#666"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            editable={!loading}
+                        />
+                    </View>
+
+                    <TouchableOpacity 
+                        onPress={handleLogin}
+                        disabled={loading}
+                        style={loading ? styles.buttonDisabled : null}
+                    >
+                        <LinearGradient
+                            colors={['#FF6B00', '#FF8E3C']}
+                            style={styles.button}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Text style={styles.buttonText}>
+                                {loading ? 'Signing in...' : 'Login'}
+                            </Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={styles.registerLink}
+                        onPress={() => router.push({ pathname: '/(auth)/register' })}
+                    >
+                        <Text style={styles.registerText}>
+                            Don't have an account? <Text style={styles.registerTextBold}>Sign Up</Text>
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
-  form: {
-    gap: 15,
-  },
-  inputContainer: {
-    borderRadius: 12,
-    padding: 15,
-  },
-  input: {
-    fontSize: 16,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-  },
-  loginButton: {
-    marginTop: 10,
-  },
-  loginButtonGradient: {
-    borderRadius: 12,
-    padding: 15,
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  registerText: {
-    fontSize: 14,
-    marginRight: 5,
-  },
-  registerLink: {
-    fontSize: 14,
-    color: '#FF6B00',
-    fontWeight: '600',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#121212',
+    },
+    formContainer: {
+        flex: 1,
+        padding: 20,
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: 'white',
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 30,
+    },
+    inputContainer: {
+        marginBottom: 20,
+    },
+    input: {
+        backgroundColor: '#1E1E1E',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 15,
+        color: 'white',
+        fontSize: 16,
+    },
+    button: {
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    registerLink: {
+        alignItems: 'center',
+    },
+    registerText: {
+        color: '#666',
+        fontSize: 14,
+    },
+    registerTextBold: {
+        color: '#FF6B00',
+        fontWeight: 'bold',
+    },
 }); 
