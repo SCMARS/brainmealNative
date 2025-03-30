@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useColorScheme, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../config/firebase';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 interface Meal {
   name: string;
@@ -55,9 +57,81 @@ export default function MealPlanScreen() {
     },
   ]);
 
+  const updateAchievements = async (totalProtein: number) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) return;
+
+      const userData = userDoc.data();
+      const achievements = userData.achievements || [];
+
+      // Update protein master achievement
+      const proteinAchievement = achievements.find((a: any) => a.id === 'protein_master');
+      if (proteinAchievement) {
+        proteinAchievement.progress = Math.max(proteinAchievement.progress, totalProtein);
+        if (proteinAchievement.progress >= proteinAchievement.total && !proteinAchievement.unlocked) {
+          proteinAchievement.unlocked = true;
+          proteinAchievement.dateUnlocked = new Date().toISOString();
+          Alert.alert(
+            'Achievement Unlocked! 🎉',
+            'Protein Master: You reached 100g protein in a day!'
+          );
+        }
+      }
+
+      // Update meal planner achievement
+      const mealPlannerAchievement = achievements.find((a: any) => a.id === 'meal_planner');
+      if (mealPlannerAchievement) {
+        mealPlannerAchievement.progress += 1;
+        if (mealPlannerAchievement.progress >= mealPlannerAchievement.total && !mealPlannerAchievement.unlocked) {
+          mealPlannerAchievement.unlocked = true;
+          mealPlannerAchievement.dateUnlocked = new Date().toISOString();
+          Alert.alert(
+            'Achievement Unlocked! 🎉',
+            'Meal Planner: You created 5 meal plans!'
+          );
+        }
+      }
+
+      // Update first meal achievement
+      const firstMealAchievement = achievements.find((a: any) => a.id === 'first_meal');
+      if (firstMealAchievement && !firstMealAchievement.unlocked) {
+        firstMealAchievement.unlocked = true;
+        firstMealAchievement.dateUnlocked = new Date().toISOString();
+        Alert.alert(
+          'Achievement Unlocked! 🎉',
+          'First Meal: You tracked your first meal!'
+        );
+      }
+
+      // Calculate total points
+      const totalPoints = achievements.reduce((total: number, achievement: any) => 
+        total + (achievement.unlocked ? achievement.points : 0), 0);
+
+      // Update user document
+      await updateDoc(doc(db, 'users', userId), {
+        achievements,
+        totalPoints,
+        level: Math.floor(totalPoints / 100) + 1
+      });
+    } catch (error) {
+      console.error('Error updating achievements:', error);
+    }
+  };
+
   const generateNewPlan = async () => {
-    // TODO: Implement Gemini API integration
-    // This will be implemented when we set up the Gemini API
+    try {
+      // TODO: Implement Gemini API integration
+      // For now, we'll just update achievements with the current meal plan
+      const totalProtein = meals.reduce((total, meal) => total + meal.macros.protein, 0);
+      await updateAchievements(totalProtein);
+    } catch (error) {
+      console.error('Error generating meal plan:', error);
+      Alert.alert('Error', 'Failed to generate meal plan. Please try again.');
+    }
   };
 
   return (
