@@ -12,7 +12,7 @@ import {
     Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, Link } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
@@ -61,123 +61,76 @@ export default function Login() {
     };
 
     return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
-            >
-                <View style={styles.formContainer}>
-                    <Text style={styles.title}>Welcome Back!</Text>
-                    <Text style={styles.subtitle}>Sign in to continue</Text>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Email"
-                            placeholderTextColor="#666"
-                            value={email}
-                            onChangeText={setEmail}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            editable={!loading}
-                        />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Password"
-                            placeholderTextColor="#666"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                            editable={!loading}
-                        />
-                    </View>
-
-                    <TouchableOpacity 
-                        onPress={handleLogin}
-                        disabled={loading}
-                        style={loading ? styles.buttonDisabled : null}
-                    >
-                        <LinearGradient
-                            colors={['#FF6B00', '#FF8E3C']}
-                            style={styles.button}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                        >
-                            <Text style={styles.buttonText}>
-                                {loading ? 'Signing in...' : 'Login'}
-                            </Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.registerLink}
-                        onPress={() => router.push({ pathname: '/(auth)/register' })}
-                    >
-                        <Text style={styles.registerText}>
-                            Don't have an account? <Text style={styles.registerTextBold}>Sign Up</Text>
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
+        <View style={styles.container}>
+            <Text style={styles.title}>BrainMeal</Text>
+            <View style={styles.form}>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Пароль"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                />
+                <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                    <Text style={styles.buttonText}>Войти</Text>
+                </TouchableOpacity>
+                <Link href="/register" style={styles.link}>
+                    <Text>Нет аккаунта? Зарегистрироваться</Text>
+                </Link>
+                <Link href="/forgot-password" style={styles.link}>
+                    <Text>Забыли пароль?</Text>
+                </Link>
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#121212',
-    },
-    formContainer: {
-        flex: 1,
         padding: 20,
+        backgroundColor: '#fff',
         justifyContent: 'center',
     },
     title: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 10,
+        textAlign: 'center',
+        marginBottom: 40,
+        color: '#FF6B00',
     },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 30,
-    },
-    inputContainer: {
-        marginBottom: 20,
+    form: {
+        gap: 15,
     },
     input: {
-        backgroundColor: '#1E1E1E',
-        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
         padding: 15,
-        marginBottom: 15,
-        color: 'white',
+        borderRadius: 8,
         fontSize: 16,
     },
     button: {
+        backgroundColor: '#FF6B00',
         padding: 15,
-        borderRadius: 10,
+        borderRadius: 8,
         alignItems: 'center',
-        marginBottom: 20,
-    },
-    buttonDisabled: {
-        opacity: 0.7,
+        marginTop: 10,
     },
     buttonText: {
-        color: 'white',
+        color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
     },
-    registerLink: {
-        alignItems: 'center',
-    },
-    registerText: {
-        color: '#666',
-        fontSize: 14,
-    },
-    registerTextBold: {
-        color: '#FF6B00',
-        fontWeight: 'bold',
+    link: {
+        alignSelf: 'center',
+        marginTop: 15,
     },
 }); 

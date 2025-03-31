@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { userProfileService } from '../services/firestore';
 import { notificationService } from '../services/notifications';
 import type { UserProfile } from '../../types';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const languages = [
   { value: 'en', label: 'English' },
@@ -23,11 +24,14 @@ const units = [
   { value: 'imperial', label: 'Imperial (lb, in)', icon: 'american-football-outline' },
 ];
 
-export default function SettingsScreen() {
+export default function Settings() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [notifications, setNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -99,6 +103,22 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
+        {/* Профиль */}
+        <View style={styles.profileSection}>
+          <View style={styles.profileInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>ИП</Text>
+            </View>
+            <View style={styles.profileText}>
+              <Text style={styles.profileName}>Иван Петров</Text>
+              <Text style={styles.profileEmail}>ivan@example.com</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.editButtonText}>Редактировать</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
             Language
@@ -321,5 +341,49 @@ const styles = StyleSheet.create({
   },
   notificationText: {
     fontSize: 16,
+  },
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  profileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF6B00',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  profileText: {
+    marginLeft: 10,
+  },
+  profileName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  editButton: {
+    marginLeft: 'auto',
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#FF6B00',
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
 }); 

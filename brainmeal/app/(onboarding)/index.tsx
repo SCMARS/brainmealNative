@@ -23,7 +23,7 @@ const goals = [
   { value: 'vegan', label: 'Vegan Lifestyle', icon: 'leaf' },
 ];
 
-export default function OnboardingScreen() {
+export default function Onboarding() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
   const router = useRouter();

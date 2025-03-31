@@ -21,7 +21,7 @@ interface UserProfile {
   theme: 'light' | 'dark' | 'system';
 }
 
-export default function ProfileScreen() {
+export default function Profile() {
   const { user, signOut } = useAuth();
   const colorScheme = useColorScheme();
   const [profile, setProfile] = useState<UserProfile>({

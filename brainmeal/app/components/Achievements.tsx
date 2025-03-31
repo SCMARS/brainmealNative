@@ -91,7 +91,7 @@ const ACHIEVEMENTS: Achievement[] = [
     }
 ];
 
-export default function Achievements() {
+const Achievements = () => {
     const [userStats, setUserStats] = useState<UserStats>({
         totalPoints: 0,
         level: 1,
@@ -307,7 +307,9 @@ export default function Achievements() {
             </ScrollView>
         </Animated.View>
     );
-}
+};
+
+export default Achievements;
 
 const styles = StyleSheet.create({
     container: {

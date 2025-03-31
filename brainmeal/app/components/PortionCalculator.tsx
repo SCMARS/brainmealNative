@@ -62,7 +62,7 @@ const PRESET_FOODS: FoodItem[] = [
     }
 ];
 
-export default function PortionCalculator() {
+const PortionCalculator = () => {
     const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
     const [currentItem, setCurrentItem] = useState<FoodItem>({
         name: '',
@@ -336,7 +336,9 @@ export default function PortionCalculator() {
             </ScrollView>
         </Animated.View>
     );
-}
+};
+
+export default PortionCalculator;
 
 const styles = StyleSheet.create({
     container: {

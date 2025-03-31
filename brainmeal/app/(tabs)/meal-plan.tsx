@@ -18,7 +18,7 @@ interface Meal {
   ingredients: string[];
 }
 
-export default function MealPlanScreen() {
+export default function MealPlan() {
   const colorScheme = useColorScheme();
   const [selectedDay, setSelectedDay] = useState('Today');
   const [meals, setMeals] = useState<Meal[]>([

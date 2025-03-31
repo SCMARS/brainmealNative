@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
-export default function RegisterScreen() {
+export default function Register() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [name, setName] = useState('');

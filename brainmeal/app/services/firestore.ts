@@ -186,3 +186,8 @@ export const aiService = {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AIResponse[];
   },
 };
+
+const firestoreService = {
+  // методы сервиса
+};
+export default firestoreService;

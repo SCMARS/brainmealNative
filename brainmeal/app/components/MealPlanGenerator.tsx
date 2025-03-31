@@ -15,6 +15,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth, db } from '../config/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy } from 'firebase/firestore';
+import * as Haptics from 'expo-haptics';
+import { aiMealService } from '../services/ai';
 
 interface Macro {
     calories: number;
@@ -44,7 +46,7 @@ interface Goals {
 
 const genAI = new GoogleGenerativeAI('AIzaSyDvp5H76M33BQvmFa87T4jvHpBI8y4FG7g');
 
-export default function MealPlanGenerator() {
+const MealPlanGenerator = () => {
     const [loading, setLoading] = useState(false);
     const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
     const [savedPlans, setSavedPlans] = useState<MealPlan[]>([]);
@@ -116,6 +118,8 @@ export default function MealPlanGenerator() {
     const generateMealPlan = async () => {
         try {
             setLoading(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
             const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
             const prompt = `Generate a healthy meal plan for one day with the following requirements:
@@ -157,9 +161,24 @@ export default function MealPlanGenerator() {
                 duration: 500,
                 useNativeDriver: true,
             }).start();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
             console.error('Error generating meal plan:', error);
             Alert.alert('Error', 'Failed to generate meal plan. Please try again.');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateQuickPlan = async () => {
+        try {
+            setLoading(true);
+            const response = await aiMealService.generateQuickMealPlan(userProfile);
+            setMealPlan(parseMealPlanResponse(response.response));
+            // Показать успешное сообщение
+        } catch (error) {
+            // Показать ошибку
         } finally {
             setLoading(false);
         }
@@ -349,7 +368,9 @@ export default function MealPlanGenerator() {
             />
         </View>
     );
-}
+};
+
+export default MealPlanGenerator;
 
 const styles = StyleSheet.create({
     container: {

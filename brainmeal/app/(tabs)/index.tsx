@@ -1,138 +1,177 @@
-import { View, Text, ScrollView, StyleSheet, useColorScheme } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Link } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
-export default function HomeScreen() {
-  const { user } = useAuth();
-  const colorScheme = useColorScheme();
-
+export default function Home() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <View style={styles.header}>
-          <Text style={[styles.greeting, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Welcome back, {user?.displayName || 'User'}!
-          </Text>
-        </View>
+    <ScrollView style={styles.container}>
+      {/* Приветствие */}
+      <View style={styles.header}>
+        <Text style={styles.greeting}>Привет, Пользователь! 👋</Text>
+        <Text style={styles.subtitle}>Готовы к здоровому питанию?</Text>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Today's Overview
-          </Text>
-          
-          <View style={styles.cardsContainer}>
-            <LinearGradient
-              colors={['#FF6B00', '#FF8533']}
-              style={styles.card}
-            >
-              <Text style={styles.cardTitle}>Calories</Text>
-              <Text style={styles.cardValue}>2,100</Text>
-              <Text style={styles.cardSubtitle}>of 2,500 kcal</Text>
-            </LinearGradient>
-
-            <LinearGradient
-              colors={['#4CAF50', '#81C784']}
-              style={styles.card}
-            >
-              <Text style={styles.cardTitle}>Water</Text>
-              <Text style={styles.cardValue}>1.5L</Text>
-              <Text style={styles.cardSubtitle}>of 2.5L</Text>
-            </LinearGradient>
-
-            <LinearGradient
-              colors={['#2196F3', '#64B5F6']}
-              style={styles.card}
-            >
-              <Text style={styles.cardTitle}>Activity</Text>
-              <Text style={styles.cardValue}>45min</Text>
-              <Text style={styles.cardSubtitle}>of 60min</Text>
-            </LinearGradient>
+      {/* Карточка прогресса */}
+      <View style={styles.progressCard}>
+        <Text style={styles.cardTitle}>Ваш прогресс сегодня</Text>
+        <View style={styles.progressStats}>
+          <View style={styles.stat}>
+            <MaterialIcons name="local-fire-department" size={24} color="#FF6B00" />
+            <Text style={styles.statValue}>1200</Text>
+            <Text style={styles.statLabel}>ккал</Text>
+          </View>
+          <View style={styles.stat}>
+            <MaterialIcons name="fitness-center" size={24} color="#FF6B00" />
+            <Text style={styles.statValue}>65g</Text>
+            <Text style={styles.statLabel}>белка</Text>
+          </View>
+          <View style={styles.stat}>
+            <MaterialIcons name="water-drop" size={24} color="#FF6B00" />
+            <Text style={styles.statValue}>1.5L</Text>
+            <Text style={styles.statLabel}>воды</Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Next Meal
-          </Text>
-          <View style={[styles.mealCard, { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' }]}>
-            <Text style={[styles.mealTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-              Lunch
-            </Text>
-            <Text style={[styles.mealTime, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-              12:30 PM
-            </Text>
-            <Text style={[styles.mealDescription, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-              Grilled Chicken Salad with Avocado
+      {/* Быстрые действия */}
+      <View style={styles.actionsGrid}>
+        <TouchableOpacity style={styles.actionCard}>
+          <MaterialIcons name="restaurant-menu" size={32} color="#FF6B00" />
+          <Text style={styles.actionText}>План питания</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionCard}>
+          <MaterialIcons name="camera-alt" size={32} color="#FF6B00" />
+          <Text style={styles.actionText}>Измерить порцию</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionCard}>
+          <MaterialIcons name="analytics" size={32} color="#FF6B00" />
+          <Text style={styles.actionText}>Аналитика</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionCard}>
+          <MaterialIcons name="emoji-events" size={32} color="#FF6B00" />
+          <Text style={styles.actionText}>Достижения</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Рекомендации */}
+      <View style={styles.recommendationsSection}>
+        <Text style={styles.sectionTitle}>Рекомендации</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.recommendationCard}>
+            <Text style={styles.recommendationTitle}>Советы по питанию</Text>
+            <Text style={styles.recommendationText}>
+              Попробуйте добавить больше белка в свой рацион
             </Text>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.recommendationCard}>
+            <Text style={styles.recommendationTitle}>Напоминание</Text>
+            <Text style={styles.recommendationText}>
+              Не забудьте выпить воды
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
   header: {
     padding: 20,
+    backgroundColor: '#fff',
   },
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
   },
-  section: {
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 5,
+  },
+  progressCard: {
+    backgroundColor: '#fff',
+    margin: 15,
     padding: 20,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  stat: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+  statLabel: {
+    color: '#666',
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 10,
+    gap: 10,
+  },
+  actionCard: {
+    backgroundColor: '#fff',
+    width: '47%',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionText: {
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  recommendationsSection: {
+    padding: 15,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginBottom: 15,
   },
-  cardsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  card: {
-    flex: 1,
-    marginHorizontal: 5,
+  recommendationCard: {
+    backgroundColor: '#fff',
     padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
+    borderRadius: 10,
+    width: 250,
+    marginRight: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  cardTitle: {
-    color: '#fff',
+  recommendationTitle: {
     fontSize: 16,
-    marginBottom: 5,
-  },
-  cardValue: {
-    color: '#fff',
-    fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 10,
   },
-  cardSubtitle: {
-    color: '#fff',
-    opacity: 0.8,
-    fontSize: 12,
-  },
-  mealCard: {
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 10,
-  },
-  mealTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  mealTime: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  mealDescription: {
-    fontSize: 16,
+  recommendationText: {
+    color: '#666',
   },
 }); 

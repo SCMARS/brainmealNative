@@ -14,7 +14,7 @@ Notifications.setNotificationHandler({
 
 const NOTIFICATION_STORAGE_KEY = '@notifications_token';
 
-export const notificationService = {
+const notificationsService = {
   registerForPushNotifications: async () => {
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -154,13 +154,15 @@ export const notificationService = {
 
   updateNotificationSettings: async (userProfile: UserProfile) => {
     // Cancel all existing notifications
-    await notificationService.cancelAllNotifications();
+    await notificationsService.cancelAllNotifications();
 
     // Reschedule notifications based on user preferences
     await Promise.all([
-      notificationService.scheduleMealReminders(userProfile),
-      notificationService.scheduleWaterReminders(userProfile),
-      notificationService.scheduleActivityReminders(userProfile),
+      notificationsService.scheduleMealReminders(userProfile),
+      notificationsService.scheduleWaterReminders(userProfile),
+      notificationsService.scheduleActivityReminders(userProfile),
     ]);
   },
-}; 
+};
+
+export default notificationsService; 

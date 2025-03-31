@@ -11,19 +11,26 @@ import {
     Animated,
     Dimensions,
     RefreshControl,
-    Platform
+    Platform,
+    Modal
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
-import { auth, storage } from './config/firebase';
+import { signOut, updateEmail, updateProfile } from 'firebase/auth';
+import { auth, storage, db } from './config/firebase';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
 import { LineChart } from 'react-native-chart-kit';
 import PortionCalculator from './components/PortionCalculator';
 import MealPlanGenerator from './components/MealPlanGenerator';
+import { StatCard } from './components/profile/StatCard';
+import { StatsModal } from './components/profile/StatsModal';
+import { AchievementCard } from './components/profile/AchievementCard';
+import { FriendCard } from './components/profile/FriendCard';
+import { User } from './types';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +54,10 @@ interface UserStats {
     meals: number;
     calories: number;
     protein: number;
+    weight?: number;
+    height?: number;
+    age?: number;
+    goal?: string;
     history: {
         date: string;
         calories: number;
@@ -117,6 +128,11 @@ export default function Profile() {
     const [editedUser, setEditedUser] = useState<User>(user);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editingStats, setEditingStats] = useState<UserStats | null>(null);
+    const [profileModalVisible, setProfileModalVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     React.useEffect(() => {
         Animated.parallel([
@@ -136,7 +152,7 @@ export default function Profile() {
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
-        // Здесь будет логика обновления данных
+        // Here would be the logic to refresh data
         setTimeout(() => setRefreshing(false), 2000);
     }, []);
 
@@ -192,40 +208,101 @@ export default function Profile() {
         }
     };
 
+    const handleOpenModal = () => {
+        setEditingStats(user.stats);
+        setModalVisible(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalVisible(false);
+        setEditingStats(null);
+    };
+
+    const handleSaveStats = () => {
+        if (editingStats) {
+            setUser({
+                ...user,
+                stats: editingStats
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleCloseModal();
+            Alert.alert('Success', 'Stats updated successfully!');
+        }
+    };
+
+    // New functions for user data change
+    const handleOpenProfileModal = () => {
+        setEditedUser({...user});
+        setErrorMessage('');
+        setProfileModalVisible(true);
+    };
+
+    const handleCloseProfileModal = () => {
+        setProfileModalVisible(false);
+    };
+
+    const handleUpdateUserProfile = async () => {
+        if (!auth.currentUser) {
+            Alert.alert('Error', 'You must be logged in to update your profile.');
+            return;
+        }
+
+        // Basic validation
+        if (!editedUser.name.trim()) {
+            setErrorMessage('Name cannot be empty');
+            return;
+        }
+
+        if (!editedUser.email.trim() || !editedUser.email.includes('@')) {
+            setErrorMessage('Please enter a valid email address');
+            return;
+        }
+
+        setIsLoading(true);
+        setErrorMessage('');
+
+        try {
+            // Update user profile in Firebase Auth
+            await updateProfile(auth.currentUser, {
+                displayName: editedUser.name,
+                photoURL: editedUser.photoURL || auth.currentUser.photoURL,
+            });
+
+            // Update email if changed
+            if (editedUser.email !== user.email) {
+                await updateEmail(auth.currentUser, editedUser.email);
+            }
+
+            // Update user data in Firestore if needed
+            if (auth.currentUser.uid) {
+                const userRef = doc(db, "users", auth.currentUser.uid);
+                await updateDoc(userRef, {
+                    name: editedUser.name,
+                    email: editedUser.email,
+                    photoURL: editedUser.photoURL,
+                    // Add any other fields you want to update
+                });
+            }
+
+            // Update local state
+            setUser(editedUser);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            handleCloseProfileModal();
+            Alert.alert('Success', 'Profile information updated successfully!');
+        } catch (error: any) {
+            console.error('Error updating profile:', error);
+            setErrorMessage(error.message || 'Failed to update profile. Please try again.');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     interface StatCardProps {
         number: number;
         label: keyof UserStats;
         onEdit: () => void;
     }
-
-    const StatCard: React.FC<StatCardProps> = ({ number, label, onEdit }) => (
-        <Animated.View 
-            style={[
-                styles.statCard,
-                { opacity: fadeAnim }
-            ]}
-        >
-            {isEditing ? (
-                <TextInput
-                    style={styles.statInput}
-                    value={editedUser.stats[label].toString()}
-                    onChangeText={(text) => setEditedUser({
-                        ...editedUser,
-                        stats: {
-                            ...editedUser.stats,
-                            [label]: parseInt(text) || 0
-                        }
-                    })}
-                    keyboardType="numeric"
-                />
-            ) : (
-                <Text style={styles.statNumber}>
-                    {number}{label === 'protein' ? 'g' : ''}
-                </Text>
-            )}
-            <Text style={styles.statLabel}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text>
-        </Animated.View>
-    );
 
     const AchievementCard: React.FC<{ achievement: Achievement }> = ({ achievement }) => (
         <Animated.View 
@@ -282,212 +359,304 @@ export default function Profile() {
         legend: ['Calories']
     };
 
-    const FriendCard: React.FC<{ friend: Friend }> = ({ friend }) => (
-        <Animated.View 
-            style={[
-                styles.friendCard,
-                { opacity: fadeAnim }
-            ]}
-        >
-            <View style={styles.friendInfo}>
-                <Image 
-                    source={{ uri: friend.photoURL }} 
-                    style={styles.friendAvatar}
-                />
-                <View style={styles.friendStatusContainer}>
-                    <View style={[
-                        styles.friendStatus,
-                        { backgroundColor: friend.status === 'online' ? '#4CAF50' : '#666' }
-                    ]} />
-                </View>
-            </View>
-            <Text style={styles.friendName}>{friend.name}</Text>
-            <Text style={styles.friendStatusText}>
-                {friend.status === 'online' ? 'Online' : 'Offline'}
-            </Text>
-        </Animated.View>
-    );
-
     return (
-        <ScrollView 
-            style={styles.container}
-            refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-        >
-            <Animated.View 
-                style={[
-                    styles.header, 
-                    { 
-                        opacity: fadeAnim,
-                        transform: [{ scale: scaleAnim }]
-                    }
-                ]}
+        <>
+            <ScrollView 
+                style={styles.container}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
             >
-                <TouchableOpacity 
-                    style={styles.avatarContainer}
-                    onPress={isEditing ? pickImage : undefined}
+                <Animated.View 
+                    style={[
+                        styles.header, 
+                        { 
+                            opacity: fadeAnim,
+                            transform: [{ scale: scaleAnim }]
+                        }
+                    ]}
                 >
-                    {editedUser.photoURL ? (
-                        <Image 
-                            source={{ uri: editedUser.photoURL }} 
-                            style={styles.avatarImage}
+                    <TouchableOpacity 
+                        style={styles.avatarContainer}
+                        onPress={isEditing ? pickImage : undefined}
+                    >
+                        {editedUser.photoURL ? (
+                            <Image 
+                                source={{ uri: editedUser.photoURL }} 
+                                style={styles.avatarImage}
+                            />
+                        ) : (
+                            <LinearGradient
+                                colors={['#FF6B00', '#FF8E3C']}
+                                style={styles.avatarGradient}
+                            >
+                                <Text style={styles.avatarText}>
+                                    {user.name.split(' ').map(n => n[0]).join('')}
+                                </Text>
+                            </LinearGradient>
+                        )}
+                        {isEditing && (
+                            <View style={styles.editPhotoButton}>
+                                <MaterialIcons name="camera-alt" size={20} color="white" />
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                    {isEditing ? (
+                        <TextInput
+                            style={styles.nameInput}
+                            value={editedUser.name}
+                            onChangeText={(text) => setEditedUser({ ...editedUser, name: text })}
                         />
                     ) : (
-                        <LinearGradient
-                            colors={['#FF6B00', '#FF8E3C']}
-                            style={styles.avatarGradient}
-                        >
-                            <Text style={styles.avatarText}>
-                                {user.name.split(' ').map(n => n[0]).join('')}
-                            </Text>
-                        </LinearGradient>
+                        <Text style={styles.name}>{user.name}</Text>
                     )}
-                    {isEditing && (
-                        <View style={styles.editPhotoButton}>
-                            <MaterialIcons name="camera-alt" size={20} color="white" />
-                        </View>
-                    )}
-                </TouchableOpacity>
-                {isEditing ? (
-                    <TextInput
-                        style={styles.nameInput}
-                        value={editedUser.name}
-                        onChangeText={(text) => setEditedUser({ ...editedUser, name: text })}
-                    />
-                ) : (
-                    <Text style={styles.name}>{user.name}</Text>
-                )}
-                <Text style={styles.email}>{user.email}</Text>
-            </Animated.View>
+                    <Text style={styles.email}>{user.email}</Text>
+                </Animated.View>
 
-            <View style={styles.statsContainer}>
-                <StatCard 
-                    number={user.stats.meals} 
-                    label="meals" 
-                    onEdit={() => {}}
-                />
-                <StatCard 
-                    number={user.stats.calories} 
-                    label="calories" 
-                    onEdit={() => {}}
-                />
-                <StatCard 
-                    number={user.stats.protein} 
-                    label="protein" 
-                    onEdit={() => {}}
-                />
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Progress</Text>
-                <View style={styles.chartContainer}>
-                    <LineChart
-                        data={chartData}
-                        width={width - 40}
-                        height={220}
-                        chartConfig={chartConfig}
-                        bezier
-                        style={styles.chart}
-                    />
+                <View style={styles.statsContainer}>
+                    <StatCard number={user.stats.meals} label="meals" onEdit={() => {}} />
+                    <StatCard number={user.stats.calories} label="calories" onEdit={() => {}} />
+                    <StatCard number={user.stats.protein} label="protein" onEdit={() => {}} />
                 </View>
-            </View>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>AI Meal Plan</Text>
-                <MealPlanGenerator />
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Meal Calculator</Text>
-                <PortionCalculator />
-            </View>
-
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Friends</Text>
-                    <TouchableOpacity 
-                        style={styles.addFriendButton}
-                        activeOpacity={0.7}
-                    >
-                        <MaterialIcons name="person-add" size={24} color="#FF6B00" />
-                    </TouchableOpacity>
+                <View style={styles.statsContainer}>
+                    <StatCard number={user.stats.weight || 0} label="weight" onEdit={() => {}} />
+                    <StatCard number={user.stats.height || 0} label="height" onEdit={() => {}} />
+                    <StatCard number={user.stats.age || 0} label="age" onEdit={() => {}} />
                 </View>
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.friendsList}
-                >
-                    {user.friends.map(friend => (
-                        <FriendCard key={friend.id} friend={friend} />
-                    ))}
-                </ScrollView>
-            </View>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Achievements</Text>
-                {user.achievements.map(achievement => (
-                    <AchievementCard 
-                        key={achievement.id} 
-                        achievement={achievement} 
-                    />
-                ))}
-            </View>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Progress</Text>
+                    <View style={styles.chartContainer}>
+                        <LineChart
+                            data={chartData}
+                            width={width - 40}
+                            height={220}
+                            chartConfig={chartConfig}
+                            bezier
+                            style={styles.chart}
+                        />
+                    </View>
+                </View>
 
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Settings</Text>
-                    {!isEditing ? (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>AI Meal Plan</Text>
+                    <MealPlanGenerator />
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Meal Calculator</Text>
+                    <PortionCalculator />
+                </View>
+
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Friends</Text>
                         <TouchableOpacity 
-                            onPress={handleEdit} 
-                            style={styles.editButton}
+                            style={styles.addFriendButton}
                             activeOpacity={0.7}
                         >
-                            <MaterialIcons name="edit" size={24} color="#FF6B00" />
+                            <MaterialIcons name="person-add" size={24} color="#FF6B00" />
                         </TouchableOpacity>
-                    ) : (
-                        <View style={styles.editActions}>
+                    </View>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.friendsList}
+                    >
+                        {user.friends.map(friend => (
+                            <FriendCard key={friend.id} friend={friend} />
+                        ))}
+                    </ScrollView>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Achievements</Text>
+                    {user.achievements.map(achievement => (
+                        <AchievementCard 
+                            key={achievement.id} 
+                            achievement={achievement} 
+                        />
+                    ))}
+                </View>
+
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Settings</Text>
+                        {!isEditing ? (
                             <TouchableOpacity 
-                                onPress={handleCancel} 
-                                style={styles.cancelButton}
+                                onPress={handleEdit} 
+                                style={styles.editButton}
                                 activeOpacity={0.7}
+                            >
+                                <MaterialIcons name="edit" size={24} color="#FF6B00" />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={styles.editActions}>
+                                <TouchableOpacity 
+                                    onPress={handleCancel} 
+                                    style={styles.cancelButton}
+                                    activeOpacity={0.7}
+                                >
+                                    <MaterialIcons name="close" size={24} color="#FF6B00" />
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={handleSave} 
+                                    style={styles.saveButton}
+                                    activeOpacity={0.7}
+                                >
+                                    <MaterialIcons name="check" size={24} color="#FF6B00" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.settingItem}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.settingText}>Notifications</Text>
+                        <MaterialIcons name="chevron-right" size={24} color="#666" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={styles.settingItem}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.settingText}>Privacy</Text>
+                        <MaterialIcons name="chevron-right" size={24} color="#666" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.settingItem, styles.logoutButton]}
+                        onPress={handleLogout}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
+                        <MaterialIcons name="logout" size={24} color="#FF6B00" />
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={handleCloseModal}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Edit Stats</Text>
+                            <TouchableOpacity 
+                                onPress={handleCloseModal}
+                                style={styles.modalCloseButton}
                             >
                                 <MaterialIcons name="close" size={24} color="#FF6B00" />
                             </TouchableOpacity>
-                            <TouchableOpacity 
-                                onPress={handleSave} 
-                                style={styles.saveButton}
-                                activeOpacity={0.7}
-                            >
-                                <MaterialIcons name="check" size={24} color="#FF6B00" />
-                            </TouchableOpacity>
                         </View>
-                    )}
+
+                        {editingStats && (
+                            <>
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Meals</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.meals.toString()}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            meals: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter meals"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Calories (kcal)</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.calories.toString()}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            calories: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter calories"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Protein (g)</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.protein.toString()}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            protein: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter protein"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Weight (kg)</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.weight?.toString() || ''}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            weight: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter weight"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Height (cm)</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.height?.toString() || ''}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            height: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter height"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.modalInputGroup}>
+                                    <Text style={styles.modalLabel}>Age</Text>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editingStats.age?.toString() || ''}
+                                        onChangeText={(text) => setEditingStats({
+                                            ...editingStats,
+                                            age: parseInt(text) || 0
+                                        })}
+                                        keyboardType="numeric"
+                                        placeholder="Enter age"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.modalSaveButton}
+                                    onPress={handleSaveStats}
+                                >
+                                    <Text style={styles.modalSaveButtonText}>Save Changes</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
                 </View>
-                <TouchableOpacity 
-                    style={styles.settingItem}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.settingText}>Notifications</Text>
-                    <MaterialIcons name="chevron-right" size={24} color="#666" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={styles.settingItem}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.settingText}>Privacy</Text>
-                    <MaterialIcons name="chevron-right" size={24} color="#666" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.settingItem, styles.logoutButton]}
-                    onPress={handleLogout}
-                    activeOpacity={0.7}
-                >
-                    <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
-                    <MaterialIcons name="logout" size={24} color="#FF6B00" />
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+            </Modal>
+        </>
     );
 }
 
@@ -584,6 +753,11 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 5,
     },
+    statEditContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     statInput: {
         color: '#FF6B00',
         fontSize: 24,
@@ -592,7 +766,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         borderBottomWidth: 2,
         borderBottomColor: '#FF6B00',
-        width: 80,
+        width: 60,
+        padding: 2,
+    },
+    statUnit: {
+        color: '#666',
+        marginLeft: 4,
+        fontSize: 14,
     },
     statLabel: {
         color: '#666',
@@ -748,5 +928,59 @@ const styles = StyleSheet.create({
     },
     addFriendButton: {
         padding: 5,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#1E1E1E',
+        borderRadius: 15,
+        padding: 20,
+        width: '90%',
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    modalCloseButton: {
+        padding: 5,
+    },
+    modalInputGroup: {
+        marginBottom: 15,
+    },
+    modalLabel: {
+        color: '#666',
+        fontSize: 14,
+        marginBottom: 5,
+    },
+    modalInput: {
+        backgroundColor: '#2A2A2A',
+        borderRadius: 10,
+        padding: 12,
+        color: 'white',
+        fontSize: 16,
+    },
+    modalSaveButton: {
+        backgroundColor: '#FF6B00',
+        borderRadius: 10,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    modalSaveButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 }); 
