@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, Switch, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, Switch, ScrollView, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { userProfileService } from '../services/firestore';
 import { notificationService } from '../services/notifications';
 import type { UserProfile } from '../../types';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const languages = [
   { value: 'en', label: 'English' },
@@ -31,7 +32,28 @@ export default function Settings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
-  const [privacyMode, setPrivacyMode] = useState(false);
+  const [language, setLanguage] = useState('ru');
+
+  // Состояния для целей
+  const [caloriesGoal, setCaloriesGoal] = useState('2000');
+  const [proteinGoal, setProteinGoal] = useState('150');
+  const [waterGoal, setWaterGoal] = useState('2.5');
+
+  // Состояния для уведомлений
+  const [waterReminders, setWaterReminders] = useState(true);
+  const [progressUpdates, setProgressUpdates] = useState(true);
+
+  // Состояния для предпочтений
+  const [dietType, setDietType] = useState('balanced');
+  const [excludedIngredients, setExcludedIngredients] = useState([]);
+
+  const dietTypes = [
+    { id: 'balanced', name: 'Сбалансированное' },
+    { id: 'low-carb', name: 'Низкоуглеводное' },
+    { id: 'high-protein', name: 'Высокобелковое' },
+    { id: 'vegetarian', name: 'Вегетарианское' },
+    { id: 'vegan', name: 'Веганское' }
+  ];
 
   useEffect(() => {
     if (user) {
@@ -104,7 +126,10 @@ export default function Settings() {
     <SafeAreaView style={styles.container}>
       <ScrollView>
         {/* Профиль */}
-        <View style={styles.profileSection}>
+        <LinearGradient
+          colors={['#FF6B00', '#FF8E3C']}
+          style={styles.profileHeader}
+        >
           <View style={styles.profileInfo}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>ИП</Text>
@@ -115,167 +140,118 @@ export default function Settings() {
             </View>
           </View>
           <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Редактировать</Text>
+            <Text style={styles.editButtonText}>Редактировать профиль</Text>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
+        {/* Основные настройки */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Language
-          </Text>
-          <View style={styles.optionsContainer}>
-            {languages.map((lang) => (
-              <TouchableOpacity
-                key={lang.value}
-                style={[
-                  styles.optionButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
-                  profile.preferences.language === lang.value && styles.selectedOption,
-                ]}
-                onPress={() => updateProfile({ language: lang.value as UserProfile['preferences']['language'] })}
-                disabled={loading}
-              >
-                <Text
+          <Text style={styles.sectionTitle}>Основные настройки</Text>
+          
+          <View style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <MaterialIcons name="notifications" size={24} color="#666" />
+              <Text style={styles.settingText}>Уведомления</Text>
+            </View>
+            <Switch
+              value={notifications}
+              onValueChange={setNotifications}
+              trackColor={{ false: '#767577', true: '#FF6B00' }}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <MaterialIcons name="dark-mode" size={24} color="#666" />
+              <Text style={styles.settingText}>Темная тема</Text>
+            </View>
+            <Switch
+              value={darkMode}
+              onValueChange={setDarkMode}
+              trackColor={{ false: '#767577', true: '#FF6B00' }}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <MaterialIcons name="language" size={24} color="#666" />
+              <Text style={styles.settingText}>Язык</Text>
+            </View>
+            <View style={styles.languageButtons}>
+              {languages.map((lang) => (
+                <TouchableOpacity
+                  key={lang.value}
                   style={[
-                    styles.optionText,
-                    { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                    profile.preferences.language === lang.value && styles.selectedOptionText,
+                    styles.languageButton,
+                    language === lang.value && styles.languageButtonActive
                   ]}
+                  onPress={() => setLanguage(lang.value)}
                 >
-                  {lang.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={[
+                    styles.languageButtonText,
+                    language === lang.value && styles.languageButtonTextActive
+                  ]}>{lang.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
+        {/* Уведомления */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Theme
-          </Text>
-          <View style={styles.optionsContainer}>
-            {themes.map((theme) => (
-              <TouchableOpacity
-                key={theme.value}
-                style={[
-                  styles.optionButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
-                  profile.preferences.theme === theme.value && styles.selectedOption,
-                ]}
-                onPress={() => updateProfile({ theme: theme.value as UserProfile['preferences']['theme'] })}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={theme.icon as any}
-                  size={24}
-                  color={
-                    profile.preferences.theme === theme.value
-                      ? '#fff'
-                      : (colorScheme === 'dark' ? '#fff' : '#000')
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionText,
-                    { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                    profile.preferences.theme === theme.value && styles.selectedOptionText,
-                  ]}
-                >
-                  {theme.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.sectionTitle}>Уведомления</Text>
+          <View style={styles.notificationsContainer}>
+            {profile?.preferences?.notifications && (
+              <>
+                <View style={styles.notificationRow}>
+                  <Text style={styles.notificationText}>Напоминания о еде</Text>
+                  <Switch
+                    value={profile.preferences.notifications.meals}
+                    onValueChange={(value) => updateProfile({
+                      notifications: { ...profile.preferences.notifications, meals: value },
+                    })}
+                    trackColor={{ false: '#767577', true: '#FF6B00' }}
+                    disabled={loading}
+                  />
+                </View>
+
+                <View style={styles.notificationRow}>
+                  <Text style={styles.notificationText}>Напоминания о воде</Text>
+                  <Switch
+                    value={profile.preferences.notifications.water}
+                    onValueChange={(value) => updateProfile({
+                      notifications: { ...profile.preferences.notifications, water: value },
+                    })}
+                    trackColor={{ false: '#767577', true: '#FF6B00' }}
+                    disabled={loading}
+                  />
+                </View>
+              </>
+            )}
           </View>
         </View>
 
+        {/* Единицы измерения */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Units
-          </Text>
+          <Text style={styles.sectionTitle}>Единицы измерения</Text>
           <View style={styles.optionsContainer}>
             {units.map((unit) => (
               <TouchableOpacity
                 key={unit.value}
                 style={[
                   styles.optionButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
-                  profile.preferences.units === unit.value && styles.selectedOption,
+                  profile?.preferences?.units === unit.value && styles.selectedOption,
                 ]}
                 onPress={() => updateProfile({ units: unit.value as UserProfile['preferences']['units'] })}
                 disabled={loading}
               >
-                <Ionicons
-                  name={unit.icon as any}
-                  size={24}
-                  color={
-                    profile.preferences.units === unit.value
-                      ? '#fff'
-                      : (colorScheme === 'dark' ? '#fff' : '#000')
-                  }
-                />
-                <Text
-                  style={[
-                    styles.optionText,
-                    { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                    profile.preferences.units === unit.value && styles.selectedOptionText,
-                  ]}
-                >
-                  {unit.label}
-                </Text>
+                <Ionicons name={unit.icon as any} size={24} color={profile?.preferences?.units === unit.value ? '#fff' : '#666'} />
+                <Text style={[
+                  styles.optionText,
+                  profile?.preferences?.units === unit.value && styles.selectedOptionText,
+                ]}>{unit.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Notifications
-          </Text>
-          <View style={[styles.notificationsContainer, { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' }]}>
-            <View style={styles.notificationRow}>
-              <Text style={[styles.notificationText, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                Meal Reminders
-              </Text>
-              <Switch
-                value={profile.preferences.notifications.meals}
-                onValueChange={(value) => updateProfile({
-                  notifications: { ...profile.preferences.notifications, meals: value },
-                })}
-                trackColor={{ false: '#767577', true: '#FF6B00' }}
-                thumbColor={profile.preferences.notifications.meals ? '#fff' : '#f4f3f4'}
-                disabled={loading}
-              />
-            </View>
-
-            <View style={styles.notificationRow}>
-              <Text style={[styles.notificationText, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                Water Reminders
-              </Text>
-              <Switch
-                value={profile.preferences.notifications.water}
-                onValueChange={(value) => updateProfile({
-                  notifications: { ...profile.preferences.notifications, water: value },
-                })}
-                trackColor={{ false: '#767577', true: '#FF6B00' }}
-                thumbColor={profile.preferences.notifications.water ? '#fff' : '#f4f3f4'}
-                disabled={loading}
-              />
-            </View>
-
-            <View style={styles.notificationRow}>
-              <Text style={[styles.notificationText, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                Activity Reminders
-              </Text>
-              <Switch
-                value={profile.preferences.notifications.activity}
-                onValueChange={(value) => updateProfile({
-                  notifications: { ...profile.preferences.notifications, activity: value },
-                })}
-                trackColor={{ false: '#767577', true: '#FF6B00' }}
-                thumbColor={profile.preferences.notifications.activity ? '#fff' : '#f4f3f4'}
-                disabled={loading}
-              />
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -384,6 +360,55 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#fff',
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  languageButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F0F0F0',
+  },
+  languageButtonActive: {
+    backgroundColor: '#FFF5EC',
+    borderColor: '#FF6B00',
+    borderWidth: 1,
+  },
+  languageButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  languageButtonTextActive: {
+    color: '#FF6B00',
+  },
+  settingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingText: {
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  subSettingText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  selectedLanguageButton: {
+    backgroundColor: '#FF6B00',
+  },
+  selectedLanguageButtonText: {
     color: '#fff',
   },
 }); 
