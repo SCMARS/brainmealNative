@@ -1,177 +1,173 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Link, useRouter, type Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect } from 'react';
+import { userProfileService } from '../services/firestore';
+import type { UserProfile } from '../../types';
+
+type QuickAction = {
+  title: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  route: Href<string>;
+};
 
 export default function Home() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      try {
+        const userProfile = await userProfileService.get(user.uid);
+        setProfile(userProfile);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const quickActions: QuickAction[] = [
+    {
+      title: 'Дневник питания',
+      icon: 'restaurant',
+      route: '/(tabs)/journal' as Href<string>,
+    },
+    {
+      title: 'План питания',
+      icon: 'event-note',
+      route: '/(tabs)/meal-plan' as Href<string>,
+    },
+    {
+      title: 'Достижения',
+      icon: 'emoji-events',
+      route: '/(tabs)/achievements' as Href<string>,
+    },
+    {
+      title: 'Статистика',
+      icon: 'bar-chart',
+      route: '/(tabs)/stats' as Href<string>,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <Text>Загрузка...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView className="flex-1 bg-gray-50">
       {/* Приветствие */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Привет, Пользователь! 👋</Text>
-        <Text style={styles.subtitle}>Готовы к здоровому питанию?</Text>
+      <View className="p-5 bg-white">
+        <Text className="text-2xl font-bold text-gray-800">
+          Привет, {profile?.displayName || 'Пользователь'}! 👋
+        </Text>
+        <Text className="text-gray-600 mt-1">
+          Готовы к здоровому питанию?
+        </Text>
       </View>
 
       {/* Карточка прогресса */}
-      <View style={styles.progressCard}>
-        <Text style={styles.cardTitle}>Ваш прогресс сегодня</Text>
-        <View style={styles.progressStats}>
-          <View style={styles.stat}>
+      <View className="m-4 p-5 bg-white rounded-xl shadow-sm">
+        <Text className="text-lg font-bold text-gray-800 mb-4">
+          Ваш прогресс сегодня
+        </Text>
+        <View className="flex-row justify-around">
+          <View className="items-center">
             <MaterialIcons name="local-fire-department" size={24} color="#FF6B00" />
-            <Text style={styles.statValue}>1200</Text>
-            <Text style={styles.statLabel}>ккал</Text>
+            <Text className="text-lg font-bold mt-1">
+              {profile?.goals?.calories || 0}
+            </Text>
+            <Text className="text-gray-600">ккал</Text>
           </View>
-          <View style={styles.stat}>
+          <View className="items-center">
             <MaterialIcons name="fitness-center" size={24} color="#FF6B00" />
-            <Text style={styles.statValue}>65g</Text>
-            <Text style={styles.statLabel}>белка</Text>
+            <Text className="text-lg font-bold mt-1">
+              {profile?.goals?.protein || 0}g
+            </Text>
+            <Text className="text-gray-600">белка</Text>
           </View>
-          <View style={styles.stat}>
+          <View className="items-center">
             <MaterialIcons name="water-drop" size={24} color="#FF6B00" />
-            <Text style={styles.statValue}>1.5L</Text>
-            <Text style={styles.statLabel}>воды</Text>
+            <Text className="text-lg font-bold mt-1">
+              {profile?.goals?.water || 0}L
+            </Text>
+            <Text className="text-gray-600">воды</Text>
           </View>
         </View>
       </View>
 
       {/* Быстрые действия */}
-      <View style={styles.actionsGrid}>
-        <TouchableOpacity style={styles.actionCard}>
-          <MaterialIcons name="restaurant-menu" size={32} color="#FF6B00" />
-          <Text style={styles.actionText}>План питания</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionCard}>
-          <MaterialIcons name="camera-alt" size={32} color="#FF6B00" />
-          <Text style={styles.actionText}>Измерить порцию</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionCard}>
-          <MaterialIcons name="analytics" size={32} color="#FF6B00" />
-          <Text style={styles.actionText}>Аналитика</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionCard}>
-          <MaterialIcons name="emoji-events" size={32} color="#FF6B00" />
-          <Text style={styles.actionText}>Достижения</Text>
-        </TouchableOpacity>
+      <View className="p-4">
+        <Text className="text-lg font-bold text-gray-800 mb-3">
+          Быстрые действия
+        </Text>
+        <View className="flex-row flex-wrap justify-between">
+          {quickActions.map((action) => (
+            <TouchableOpacity
+              key={action.title}
+              className="w-[48%] p-4 bg-white rounded-xl shadow-sm mb-4 items-center"
+              onPress={() => router.push(action.route)}
+            >
+              <MaterialIcons name={action.icon} size={32} color="#FF6B00" />
+              <Text className="text-gray-800 mt-2 text-center font-medium">
+                {action.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Рекомендации */}
-      <View style={styles.recommendationsSection}>
-        <Text style={styles.sectionTitle}>Рекомендации</Text>
+      <View className="p-4">
+        <Text className="text-lg font-bold text-gray-800 mb-3">
+          Рекомендации
+        </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.recommendationCard}>
-            <Text style={styles.recommendationTitle}>Советы по питанию</Text>
-            <Text style={styles.recommendationText}>
-              Попробуйте добавить больше белка в свой рацион
+          <View className="mr-4 p-4 bg-white rounded-xl shadow-sm w-64">
+            <Text className="font-bold text-gray-800 mb-2">
+              План питания
             </Text>
+            <Text className="text-gray-600">
+              Сгенерируйте персональный план питания на основе ваших целей
+            </Text>
+            <TouchableOpacity
+              className="mt-3 bg-orange-100 p-2 rounded-lg"
+              onPress={() => router.push('/(tabs)/meal-plan')}
+            >
+              <Text className="text-orange-600 text-center font-medium">
+                Создать план
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.recommendationCard}>
-            <Text style={styles.recommendationTitle}>Напоминание</Text>
-            <Text style={styles.recommendationText}>
-              Не забудьте выпить воды
+          <View className="mr-4 p-4 bg-white rounded-xl shadow-sm w-64">
+            <Text className="font-bold text-gray-800 mb-2">
+              Аналитика
             </Text>
+            <Text className="text-gray-600">
+              Просмотрите вашу статистику и прогресс
+            </Text>
+            <TouchableOpacity
+              className="mt-3 bg-orange-100 p-2 rounded-lg"
+              onPress={() => router.push('/(tabs)/analytics')}
+            >
+              <Text className="text-orange-600 text-center font-medium">
+                Смотреть
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
     </ScrollView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
-  progressCard: {
-    backgroundColor: '#fff',
-    margin: 15,
-    padding: 20,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  statLabel: {
-    color: '#666',
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 10,
-    gap: 10,
-  },
-  actionCard: {
-    backgroundColor: '#fff',
-    width: '47%',
-    padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  actionText: {
-    marginTop: 10,
-    fontWeight: '500',
-  },
-  recommendationsSection: {
-    padding: 15,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  recommendationCard: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    width: 250,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recommendationTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  recommendationText: {
-    color: '#666',
-  },
-}); 
+} 

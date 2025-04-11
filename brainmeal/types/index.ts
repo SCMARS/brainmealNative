@@ -18,7 +18,15 @@ export interface UserProfile {
       meals: boolean;
       water: boolean;
       activity: boolean;
+      progress: boolean;
     };
+    dietType: 'balanced' | 'low-carb' | 'high-protein' | 'vegetarian' | 'vegan';
+    excludedIngredients: string[];
+  };
+  goals: {
+    calories: number;
+    protein: number;
+    water: number;
   };
   subscription: {
     isPremium: boolean;

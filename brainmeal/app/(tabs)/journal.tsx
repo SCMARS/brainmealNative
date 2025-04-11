@@ -1,8 +1,7 @@
-import { View, Text, ScrollView, StyleSheet, useColorScheme, TouchableOpacity, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 interface JournalEntry {
   id: string;
@@ -13,407 +12,182 @@ interface JournalEntry {
   calories?: number;
 }
 
-export default function JournalScreen() {
-  const colorScheme = useColorScheme();
-  const [entries, setEntries] = useState<JournalEntry[]>([
-    {
-      id: '1',
-      type: 'meal',
-      time: '8:00 AM',
-      title: 'Breakfast',
-      details: 'Oatmeal with banana and almonds',
-      calories: 450,
-    },
-    {
-      id: '2',
-      type: 'water',
-      time: '9:30 AM',
-      title: 'Water Intake',
-      details: '250ml',
-    },
-    {
-      id: '3',
-      type: 'activity',
-      time: '10:00 AM',
-      title: 'Morning Run',
-      details: '5km in 30 minutes',
-    },
-  ]);
-
+export default function Journal() {
+  const router = useRouter();
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEntry, setNewEntry] = useState<Partial<JournalEntry>>({
     type: 'meal',
-    title: '',
-    details: '',
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   });
 
   const addEntry = () => {
-    if (newEntry.title && newEntry.details) {
-      const entry: JournalEntry = {
-        id: Date.now().toString(),
-        type: newEntry.type as 'meal' | 'activity' | 'water',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        title: newEntry.title,
-        details: newEntry.details,
-        calories: newEntry.type === 'meal' ? newEntry.calories : undefined,
-      };
-      setEntries([entry, ...entries]);
-      setShowAddModal(false);
-      setNewEntry({ type: 'meal', title: '', details: '' });
-    }
+    if (!newEntry.title || !newEntry.details) return;
+
+    const entry: JournalEntry = {
+      id: Date.now().toString(),
+      type: newEntry.type as 'meal' | 'activity' | 'water',
+      time: newEntry.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      title: newEntry.title,
+      details: newEntry.details,
+      calories: newEntry.calories,
+    };
+
+    setEntries([...entries, entry]);
+    setShowAddModal(false);
+    setNewEntry({
+      type: 'meal',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
   };
 
   const getEntryIcon = (type: string) => {
     switch (type) {
       case 'meal':
-        return 'restaurant-outline';
+        return 'restaurant';
       case 'activity':
-        return 'fitness-outline';
+        return 'fitness-center';
       case 'water':
-        return 'water-outline';
+        return 'water-drop';
       default:
-        return 'add-circle-outline';
+        return 'info';
     }
   };
 
   const getEntryColor = (type: string) => {
     switch (type) {
       case 'meal':
-        return ['#FF6B00', '#FF8533'];
+        return '#FF6B00';
       case 'activity':
-        return ['#4CAF50', '#81C784'];
+        return '#4CAF50';
       case 'water':
-        return ['#2196F3', '#64B5F6'];
+        return '#2196F3';
       default:
-        return ['#9E9E9E', '#BDBDBD'];
+        return '#666';
     }
   };
 
   return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-            Journal
-          </Text>
-          <TouchableOpacity
-              onPress={() => setShowAddModal(true)}
-              style={styles.addButtonIcon}
+    <View className="flex-1 bg-gray-50">
+      <View className="p-4 flex-row justify-between items-center">
+        <Text className="text-2xl font-bold text-gray-800">Дневник</Text>
+        <TouchableOpacity
+          onPress={() => setShowAddModal(true)}
+          className="bg-orange-500 p-2 rounded-full"
+        >
+          <MaterialIcons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView className="flex-1 p-4">
+        {entries.map((entry) => (
+          <View
+            key={entry.id}
+            className="bg-white rounded-xl p-4 mb-4 shadow-sm"
           >
-            <Ionicons name="add-circle-outline" size={24} color="#FF6B00" />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.entriesContainer}>
-          {entries.map((entry) => (
+            <View className="flex-row items-center mb-2">
               <View
-                  key={entry.id}
-                  style={[
-                    styles.entryCard,
-                    { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' },
-                  ]}
+                className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                style={{ backgroundColor: getEntryColor(entry.type) }}
               >
-                <LinearGradient
-                    colors={getEntryColor(entry.type)}
-                    style={styles.iconContainer}
-                >
-                  <Ionicons name={getEntryIcon(entry.type)} size={24} color="#fff" />
-                </LinearGradient>
-
-                <View style={styles.entryContent}>
-                  <View style={styles.entryHeader}>
-                    <Text style={[styles.entryTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                      {entry.title}
-                    </Text>
-                    <Text style={[styles.entryTime, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-                      {entry.time}
-                    </Text>
-                  </View>
-
-                  <Text style={[styles.entryDetails, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                    {entry.details}
-                  </Text>
-
-                  {entry.calories && (
-                      <Text style={[styles.calories, { color: colorScheme === 'dark' ? '#999' : '#666' }]}>
-                        {entry.calories} kcal
-                      </Text>
-                  )}
-                </View>
+                <MaterialIcons
+                  name={getEntryIcon(entry.type)}
+                  size={20}
+                  color="#fff"
+                />
               </View>
-          ))}
-        </ScrollView>
-
-        {showAddModal && (
-            <View style={styles.modal}>
-              <View
-                  style={[
-                    styles.modalContent,
-                    { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#fff' },
-                  ]}
-              >
-                <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#fff' : '#000' }]}>
-                  Add New Entry
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-gray-800">
+                  {entry.title}
                 </Text>
-
-                <View style={styles.typeSelector}>
-                  {['meal', 'activity', 'water'].map((type) => (
-                      <TouchableOpacity
-                          key={type}
-                          style={[
-                            styles.typeButton,
-                            newEntry.type === type && styles.selectedType,
-                            { backgroundColor: colorScheme === 'dark' ? '#333' : '#F5F5F5' },
-                          ]}
-                          onPress={() => setNewEntry({ ...newEntry, type: type as 'meal' | 'activity' | 'water' })}
-                      >
-                        <Text
-                            style={[
-                              styles.typeText,
-                              { color: colorScheme === 'dark' ? '#fff' : '#000' },
-                              newEntry.type === type && styles.selectedTypeText,
-                            ]}
-                        >
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </Text>
-                      </TouchableOpacity>
-                  ))}
-                </View>
-
-                <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        color: colorScheme === 'dark' ? '#fff' : '#000',
-                        borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
-                      },
-                    ]}
-                    placeholder="Title"
-                    placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-                    value={newEntry.title}
-                    onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
-                />
-
-                <TextInput
-                    style={[
-                      styles.input,
-                      styles.textArea,
-                      {
-                        color: colorScheme === 'dark' ? '#fff' : '#000',
-                        borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
-                      },
-                    ]}
-                    placeholder="Details"
-                    placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-                    value={newEntry.details}
-                    onChangeText={(text) => setNewEntry({ ...newEntry, details: text })}
-                    multiline={true}
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                />
-
-                {newEntry.type === 'meal' && (
-                    <TextInput
-                        style={[
-                          styles.input,
-                          {
-                            color: colorScheme === 'dark' ? '#fff' : '#000',
-                            borderColor: colorScheme === 'dark' ? '#444' : '#ddd'
-                          },
-                        ]}
-                        placeholder="Calories"
-                        placeholderTextColor={colorScheme === 'dark' ? '#999' : '#666'}
-                        value={newEntry.calories?.toString() || ''}
-                        onChangeText={(text) => {
-                          const calories = text === '' ? undefined : parseInt(text);
-                          setNewEntry({ ...newEntry, calories });
-                        }}
-                        keyboardType="numeric"
-                    />
-                )}
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                      style={[
-                        styles.modalButton,
-                        styles.cancelButton,
-                        { backgroundColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' }
-                      ]}
-                      onPress={() => {
-                        setShowAddModal(false);
-                        setNewEntry({ type: 'meal', title: '', details: '' });
-                      }}
-                  >
-                    <Text style={[
-                      styles.cancelButtonText,
-                      { color: colorScheme === 'dark' ? '#fff' : '#666' }
-                    ]}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                      style={[styles.modalButton, styles.addButton]}
-                      onPress={addEntry}
-                      disabled={!newEntry.title || !newEntry.details}
-                  >
-                    <Text style={styles.addButtonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text className="text-gray-500">{entry.time}</Text>
               </View>
             </View>
-        )}
-      </SafeAreaView>
+            <Text className="text-gray-600 mb-2">{entry.details}</Text>
+            {entry.calories && (
+              <Text className="text-orange-500 font-medium">
+                {entry.calories} ккал
+              </Text>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white rounded-xl p-4 w-[90%]">
+            <Text className="text-xl font-bold text-gray-800 mb-4">
+              Добавить запись
+            </Text>
+
+            <View className="flex-row justify-around mb-4">
+              {['meal', 'activity', 'water'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  className={`p-2 rounded-lg ${
+                    newEntry.type === type ? 'bg-orange-100' : 'bg-gray-100'
+                  }`}
+                  onPress={() => setNewEntry({ ...newEntry, type: type as any })}
+                >
+                  <MaterialIcons
+                    name={getEntryIcon(type)}
+                    size={24}
+                    color={newEntry.type === type ? '#FF6B00' : '#666'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              className="border border-gray-300 rounded-lg p-3 mb-3"
+              placeholder="Название"
+              value={newEntry.title}
+              onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
+            />
+
+            <TextInput
+              className="border border-gray-300 rounded-lg p-3 mb-3"
+              placeholder="Описание"
+              multiline
+              numberOfLines={3}
+              value={newEntry.details}
+              onChangeText={(text) => setNewEntry({ ...newEntry, details: text })}
+            />
+
+            {newEntry.type === 'meal' && (
+              <TextInput
+                className="border border-gray-300 rounded-lg p-3 mb-3"
+                placeholder="Калории"
+                keyboardType="numeric"
+                value={newEntry.calories?.toString()}
+                onChangeText={(text) =>
+                  setNewEntry({ ...newEntry, calories: Number(text) })
+                }
+              />
+            )}
+
+            <View className="flex-row justify-end space-x-2">
+              <TouchableOpacity
+                className="bg-gray-200 p-3 rounded-lg"
+                onPress={() => setShowAddModal(false)}
+              >
+                <Text className="text-gray-800">Отмена</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-orange-500 p-3 rounded-lg"
+                onPress={addEntry}
+              >
+                <Text className="text-white">Добавить</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  addButtonIcon: {
-    padding: 8,
-  },
-  entriesContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  entryCard: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  entryContent: {
-    flex: 1,
-  },
-  entryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  entryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  entryTime: {
-    fontSize: 14,
-  },
-  entryDetails: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  calories: {
-    fontSize: 12,
-  },
-  modal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modalContent: {
-    width: '90%',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  typeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  selectedType: {
-    backgroundColor: '#FF6B00',
-  },
-  typeText: {
-    fontSize: 14,
-  },
-  selectedTypeText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 80,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginLeft: 10,
-    minWidth: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#E0E0E0',
-  },
-  addButton: {
-    backgroundColor: '#FF6B00',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

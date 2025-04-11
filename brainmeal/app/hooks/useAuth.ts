@@ -4,16 +4,16 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      setIsAuthenticated(!!user);
+      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  return { user, isAuthenticated };
+  return { user, loading };
 } 
